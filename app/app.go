@@ -2,11 +2,15 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 
 	"strings"
 
+	"github.com/robjporter/go-functions/as"
 	"github.com/robjporter/go-functions/cisco/ucs"
+	"github.com/robjporter/go-functions/environment"
+	"github.com/robjporter/go-functions/times"
 )
 
 const (
@@ -51,7 +55,7 @@ func (a *Application) runAll() {
 			a.LogInfo("Logging out of UCS System", map[string]interface{}{"System": a.UCS[i].ip}, false)
 			myucs.Logout()
 		}
-		a.LogInfo("Indexed all discovered UCS System Servers", map[string]interface{}{"Servers": totalServers}, false)
+		a.LogInfo("Indexed all discovered UCS System Servers", map[string]interface{}{"Total Servers": totalServers}, false)
 		a.processAllServers()
 	} else {
 		fmt.Println("No UCS Systems detected in the config file.  Please trying adding one and try again.")
@@ -59,13 +63,16 @@ func (a *Application) runAll() {
 }
 
 func (a *Application) processAllServers() {
-	csv := "Active,Associated,Powered,Serial,Model,Chassis,Slot,Name,Label,Description,CPU,Memory,Associated To\n"
+	csv := "Server,Active,Associated,Powered,Domain,Serial,Model,Chassis,Slot,Name,Label,Description,CPU,Memory,Associated To\n"
 	if len(a.UCS) > 0 {
+		total := 1
 		for i := 0; i < len(a.UCS); i++ {
 			for j := 0; j < len(a.UCS[i].blades); j++ {
+				csv += as.ToString(total) + ","
 				csv += isActive(a.UCS[i].blades[j].BladeAssociation, a.UCS[i].blades[j].BladePower) + ","
 				csv += a.UCS[i].blades[j].BladeAssociation + ","
 				csv += a.UCS[i].blades[j].BladePower + ","
+				csv += a.UCS[i].name + ","
 				csv += a.UCS[i].blades[j].BladeSerial + ","
 				csv += a.UCS[i].blades[j].BladeModel + ","
 				csv += a.UCS[i].blades[j].BladeChassis + ","
@@ -77,10 +84,25 @@ func (a *Application) processAllServers() {
 				csv += a.UCS[i].blades[j].BladeMemory + ","
 				csv += a.UCS[i].blades[j].BladeAssociatedTo + ","
 				csv += "\n"
+				total++
 			}
 		}
 	}
-	fmt.Println(csv)
+	now := times.TodayAuto()
+	filename := "data" + environment.PathSeparator() + as.ToString(now.GetYear()) + environment.PathSeparator()
+	filename += now.GetMonthName() + environment.PathSeparator() + as.ToString(now.GetDay()) + environment.PathSeparator()
+	os.MkdirAll(filename, os.ModePerm)
+	filename += makeTwoDigit(as.ToString(now.GetHour())) + "_" + makeTwoDigit(as.ToString(now.GetMinute())) + "_" + makeTwoDigit(as.ToString(now.GetSecond()))
+	filename += ".csv"
+	a.saveFile(filename, csv)
+
+}
+
+func makeTwoDigit(input string) string {
+	if len(input) == 1 {
+		return "0" + input
+	}
+	return input
 }
 
 func isActive(assocated string, power string) string {
