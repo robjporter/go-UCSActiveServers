@@ -62,6 +62,14 @@ func (a *Application) runAll() {
 	}
 }
 
+func (a *Application) generatePath(year string, month string, day string) string {
+	sday := ""
+	if day != "0" {
+		sday = day
+	}
+	return "data/" + year + "/" + month + "/" + sday
+}
+
 func (a *Application) processAllServers() {
 	csv := "Server,Active,Associated,Powered,Domain,Serial,Model,Chassis,Slot,Name,Label,Description,CPU,Memory,Associated To\n"
 	if len(a.UCS) > 0 {
@@ -88,7 +96,7 @@ func (a *Application) processAllServers() {
 			}
 		}
 	}
-	now := times.TodayAuto()
+	now := times.NewTodayAuto()
 	filename := "data" + environment.PathSeparator() + as.ToString(now.GetYear()) + environment.PathSeparator()
 	filename += now.GetMonthName() + environment.PathSeparator() + as.ToString(now.GetDay()) + environment.PathSeparator()
 	os.MkdirAll(filename, os.ModePerm)

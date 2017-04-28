@@ -1,5 +1,12 @@
 # go-UCSActiveServers
-TBC
+This application was constructed to query one or more UCS Domains and report on the currently active UCS Servers.  Each UCS Domain is queried for all the discovered servers, then each server is interrogated and finally a CSV report is generated for the year, month, day and time.
+
+An active server for this application is defined by;
+1. A Service Profile is associated to the server
+2. The server is powered up
+
+If both of these factors are true at the time of the application running, then the blade will be considered to be in use.
+
 
 ## Setting up your GO environment
 Depending on your particular environment, there are a number of ways to setup and install GO.  This repo was developed on a MAC and was installed using Brew.  For instructions on installing HomeBrew, please check [here](https://brew.sh/); and then entering;

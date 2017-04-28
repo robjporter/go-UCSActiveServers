@@ -1,17 +1,27 @@
 package app
 
 import (
+	"strings"
+	"time"
+
+	functions2 "github.com/robjporter/go-functions"
 	"github.com/robjporter/go-functions/as"
 	"github.com/robjporter/go-functions/kingpin"
-	"strings"
+	"github.com/robjporter/go-functions/times"
 )
 
 var (
-	add       = kingpin.Command("add", "Register a new UCS domain.")
-	update    = kingpin.Command("update", "Update a UCS domain.")
-	delete    = kingpin.Command("delete", "Remove a UCS domain.")
-	show      = kingpin.Command("show", "Show a UCS domain.")
-	run       = kingpin.Command("run", "Run the main application.")
+	add    = kingpin.Command("add", "Register a new UCS domain.")
+	update = kingpin.Command("update", "Update a UCS domain.")
+	delete = kingpin.Command("delete", "Remove a UCS domain.")
+	show   = kingpin.Command("show", "Show a UCS domain.")
+	run    = kingpin.Command("run", "Run the main application.")
+	report = kingpin.Command("report", "Run a report for utilisation.")
+
+	reportYear  = report.Flag("year", "The year for the report to be generated.  No month provided = current month.").Int()
+	reportMonth = report.Flag("month", "The month for the report to be generated. No year provided = current year.").Int()
+	reportDay   = report.Flag("day", "The day for the report to be generated.  No year or month provided = current year and month.").Int()
+
 	addUCS    = add.Command("ucs", "Add a UCS Domain")
 	updateUCS = update.Command("ucs", "Update a UCS Domain")
 	deleteUCS = delete.Command("ucs", "Delete a UCS Domain")
@@ -46,6 +56,8 @@ func ProcessCommandLineArguments() string {
 		return "SHOWUCS|" + as.ToString(*showUCSIP)
 	case "show all":
 		return "SHOWALL"
+	case "report":
+		return "REPORT|" + as.ToString(*reportYear) + "|" + as.ToString(*reportMonth) + "|" + as.ToString(*reportDay)
 	}
 	return ""
 }
@@ -66,7 +78,36 @@ func (a *Application) processResponse(response string) {
 		a.showUCSSystem(splits[1])
 	case "SHOWALL":
 		a.showUCSSystems()
+	case "REPORT":
+		a.generateReport(as.ToInt(splits[1]), as.ToInt(splits[2]), as.ToInt(splits[3]))
+	}
+}
 
+func (a *Application) generateReport(year, month, day int) {
+	t := times.NewTodayAuto()
+	if year == 0 {
+		year = t.GetYear()
+	}
+	if month == 0 {
+		month = t.GetMonth()
+	}
+
+	filename := a.generatePath(as.ToString(year), times.MonthIntToName(month), as.ToString(day))
+
+	if functions2.Exists(filename) {
+		zipName := ""
+		if day > 0 {
+			zipName = "./Archive-" + as.ToString(year) + "-" + times.MonthIntToName(month) + "-" + as.ToString(day) + "-" + as.ToString(time.Now().Unix()) + ".zip"
+		} else {
+			zipName = "./Archive-" + as.ToString(year) + "-" + times.MonthIntToName(month) + "-" + as.ToString(time.Now().Unix()) + ".zip"
+		}
+		err := functions2.Zipit(filename, zipName)
+
+		if err == nil {
+			a.LogInfo("Zip file created successfully in the root directory.", nil, false)
+		} else {
+			a.LogInfo("Zip file creation failed.", nil, false)
+		}
 	}
 }
 
